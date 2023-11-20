@@ -1,9 +1,20 @@
 from flask import Flask
 from prometheus_client import start_http_server, Counter, generate_latest
+from elasticapm.contrib.flask import ElasticAPM
 
 app = Flask(__name__)
+
+app.config['ELASTIC_APM'] = {
+    'SERVICE_NAME': 'my-service-name',
+    'SECRET_TOKEN': 'Agd5v4Hj4sihzKnqZV',
+    #SEpvTDY0c0Jfd1dsbzBfTV9kZXY6dmlzNWFlWVVRdnk5bDdvcTUwTmF5QQ==
+    'DEBUG': True
+}
+apm = ElasticAPM(app)
+
 # Prometheus metrics
 counter = Counter('requests_total', 'Total number of requests.')
+
 
 # Route 1: Home page
 @app.route('/')
@@ -27,6 +38,20 @@ def contact():
 def custom_metrics():
     # return str(counter)
     return generate_latest()
+
+@app.route('/exception')
+def exception():
+    try:
+        1 / 0
+    except ZeroDivisionError:
+        apm.capture_exception()
+    return 'Exception'
+    
+
+@app.route('/log')
+def log():
+    apm.capture_message('hello, world!')   
+    return 'Log'    
 
 
 if __name__ == '__main__':
